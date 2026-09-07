@@ -1,0 +1,123 @@
+{
+  "info": {
+    "_postman_id": "log-management-demo",
+    "name": "Log Management Demo API",
+    "description": "Complete API test collection for Log Management Demo System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"admin@demoA\", \"password\": \"password123\"}"
+            },
+            "url": {"raw": "http://localhost:3000/api/auth/login", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "login"]}
+          }
+        },
+        {
+          "name": "Verify Token",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": {"raw": "http://localhost:3000/api/auth/me", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "me"]}
+          }
+        },
+        {
+          "name": "Login Invalid",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"email\": \"admin@demoA\", \"password\": \"wrong\"}"},
+            "url": {"raw": "http://localhost:3000/api/auth/login", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "login"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ingest",
+      "item": [
+        {
+          "name": "Ingest API Source",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {"mode": "raw", "raw": "{\"source\": \"api\", \"tenant\": \"demoA\", \"http_method\": \"GET\", \"url\": \"/api/users\", \"status_code\": 200, \"src_ip\": \"203.0.113.50\", \"user\": \"admin\", \"severity\": 3}"},
+            "url": {"raw": "http://localhost:3000/api/ingest", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "ingest"]}
+          }
+        },
+        {
+          "name": "Ingest CrowdStrike",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {"mode": "raw", "raw": "{\"source\": \"crowdstrike\", \"tenant\": \"demoA\", \"event_type\": \"threat\", \"severity\": 9, \"rule_name\": \"Detect Ransomware\", \"rule_id\": \"CR-001\", \"src_ip\": \"198.51.100.10\"}"},
+            "url": {"raw": "http://localhost:3000/api/ingest", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "ingest"]}
+          }
+        },
+        {
+          "name": "Ingest Invalid Schema",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {"mode": "raw", "raw": "{\"source\": \"invalid_source\"}"},
+            "url": {"raw": "http://localhost:3000/api/ingest", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "ingest"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Search All",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": {"raw": "http://localhost:3000/api/search?keyword=&from=&to=", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "search"]}
+          }
+        },
+        {
+          "name": "Search with Keyword",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": {"raw": "http://localhost:3000/api/search?keyword=DROP", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "search"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Alerts",
+      "item": [
+        {
+          "name": "Get Alerts",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": {"raw": "http://localhost:3000/api/alerts", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "alerts"]}
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:3000"},
+    {"key": "token", "value": ""}
+  ]
+}
