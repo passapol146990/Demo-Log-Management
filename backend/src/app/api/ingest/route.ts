@@ -9,6 +9,7 @@ import { normalizeM365 } from "@/lib/normalizers/m365";
 import { normalizeAD } from "@/lib/normalizers/ad";
 import { normalizeNetwork } from "@/lib/normalizers/network";
 import { normalizeFirewall } from "@/lib/normalizers/firewall";
+import { indexLog } from "@/lib/opensearch";
 
 function normalize(source: string, data: Record<string, unknown>, raw: string) {
   switch (source) {
@@ -39,6 +40,7 @@ export async function POST(request: NextRequest) {
     const tenant = payload.tenant;
     const data = { ...parsed, tenant };
     const result = normalize(parsed.source, data, JSON.stringify(body));
+    await indexLog(result);
     return NextResponse.json({ normalized: result }, { status: 200 });
   } catch (error) {
     if (error instanceof ZodError) {
