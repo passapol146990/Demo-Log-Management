@@ -15,10 +15,18 @@ services:
       - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
       - WEBHOOK_URL=${WEBHOOK_URL}
     depends_on:
-      - opensearch
-      - vector
+      opensearch:
+        condition: service_healthy
+      vector:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/auth/me"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     volumes:
-      - ./backend:/app
+      - ./backend/src:/app/src
       - /app/node_modules
     restart: unless-stopped
 
@@ -28,12 +36,18 @@ services:
       - "514:514/udp"
       - "514:514/tcp"
     volumes:
-      - ./ingest/vector.toml:/etc/vector/vector.toml
+      - ./ingest/vector.toml:/etc/vector/vector.toml:ro
     environment:
       - VECTOR_LOG=${VECTOR_LOG:-info}
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:514"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   opensearch:
     image: opensearchproject/opensearch:latest
@@ -42,6 +56,7 @@ services:
       - "discovery.type=single-node"
       - "plugins.security.disabled=true"
       - "OPENSEARCH_JAVA_HOME=/usr/share/opensearch/jdk"
+      - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_PASSWORD}"
     ulimits:
       memlock:
         soft: -1
@@ -51,20 +66,32 @@ services:
     volumes:
       - opensearch-data:/usr/share/opensearch/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: ["node", "workers/alertChecker.js"]
+    command: ["node", "-e", "require('./src/workers/alertChecker')"]
     environment:
       - OPENSEARCH_URL=${OPENSEARCH_URL}
       - OPENSEARCH_USER=${OPENSEARCH_USER}
       - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
       - WEBHOOK_URL=${WEBHOOK_URL}
     depends_on:
-      - opensearch
+      opensearch:
+        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "node -e 'process.exit(0)'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   opensearch-data:
