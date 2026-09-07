@@ -1,0 +1,25 @@
+[sources.syslog]
+type = "socket"
+mode = "udp"
+address = "0.0.0.0:514"
+
+[sources.syslog_tcp]
+type = "socket"
+mode = "tcp"
+address = "0.0.0.0:514"
+
+[transforms.normalize]
+type = "remap"
+inputs = ["syslog", "syslog_tcp"]
+source = '''
+  .source_type = "syslog"
+  .vendor = "firewall"
+  .product = "network"
+'''
+
+[sinks.dashboard]
+type = "http"
+inputs = ["normalize"]
+endpoint = "http://backend:3000/api/ingest"
+encoding = "json"
+headers = { "Content-Type" = "application/json", "X-Source" = "firewall" }

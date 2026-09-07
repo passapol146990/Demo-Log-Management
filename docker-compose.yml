@@ -1,0 +1,70 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - JWT_SECRET=${JWT_SECRET}
+      - OPENSEARCH_URL=${OPENSEARCH_URL}
+      - OPENSEARCH_USER=${OPENSEARCH_USER}
+      - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+    depends_on:
+      - opensearch
+      - vector
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    restart: unless-stopped
+
+  vector:
+    image: timberio/vector:0.x-distroless-libc
+    ports:
+      - "514:514/udp"
+      - "514:514/tcp"
+    volumes:
+      - ./ingest/vector.toml:/etc/vector/vector.toml
+    environment:
+      - VECTOR_LOG=${VECTOR_LOG:-info}
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  opensearch:
+    image: opensearchproject/opensearch:latest
+    environment:
+      - bootstrap.memory_lock=true
+      - "discovery.type=single-node"
+      - "plugins.security.disabled=true"
+      - "OPENSEARCH_JAVA_HOME=/usr/share/opensearch/jdk"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["node", "workers/alertChecker.js"]
+    environment:
+      - OPENSEARCH_URL=${OPENSEARCH_URL}
+      - OPENSEARCH_USER=${OPENSEARCH_USER}
+      - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+    depends_on:
+      - opensearch
+    restart: unless-stopped
+
+volumes:
+  opensearch-data:

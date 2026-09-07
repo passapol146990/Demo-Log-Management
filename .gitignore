@@ -216,3 +216,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Backend
+backend/node_modules/
+backend/.next/
+backend/.env
+backend/*.js
+backend/*.map
+
+# Docs
+docs/progress.md
+docs/acceptance_results.md
