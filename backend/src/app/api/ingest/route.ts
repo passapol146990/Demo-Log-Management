@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
 import { ingestSchema } from "@/lib/ingest-schema";
+import { ZodError } from "zod";
 import { normalizeApi } from "@/lib/normalizers/api";
 import { normalizeCrowdStrike } from "@/lib/normalizers/crowdstrike";
 import { normalizeAWS } from "@/lib/normalizers/aws";
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
     const result = normalize(parsed.source, data, JSON.stringify(body));
     return NextResponse.json({ normalized: result }, { status: 200 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    if (error instanceof ZodError) {
       return NextResponse.json({ error: "Validation failed", details: error.errors }, { status: 400 });
     }
     return NextResponse.json({ error: (error as Error).message }, { status: 400 });

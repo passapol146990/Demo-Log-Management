@@ -1,4 +1,4 @@
-[sources.syslog]
+[sources.syslog_udp]
 type = "socket"
 mode = "udp"
 address = "0.0.0.0:514"
@@ -8,18 +8,35 @@ type = "socket"
 mode = "tcp"
 address = "0.0.0.0:514"
 
-[transforms.normalize]
+[transforms.parse_syslog]
 type = "remap"
-inputs = ["syslog", "syslog_tcp"]
+inputs = ["syslog_udp", "syslog_tcp"]
 source = '''
-  .source_type = "syslog"
+  .message = parse_syslog(.message) ?? .message
+  .source = "firewall"
   .vendor = "firewall"
   .product = "network"
+  .event_type = "network"
+  .event_subtype = "syslog"
+  .severity = 5
 '''
 
-[sinks.dashboard]
+[transforms.add_source_field]
+type = "remap"
+inputs = ["parse_syslog"]
+source = '''
+  .source = "firewall"
+  .raw = .message
+'''
+
+[sinks.backend]
 type = "http"
-inputs = ["normalize"]
+inputs = ["add_source_field"]
 endpoint = "http://backend:3000/api/ingest"
 encoding = "json"
 headers = { "Content-Type" = "application/json", "X-Source" = "firewall" }
+
+[sinks.dashboard]
+type = "console"
+inputs = ["add_source_field"]
+encoding.codec = "json"
