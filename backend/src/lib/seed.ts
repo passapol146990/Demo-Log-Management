@@ -1,9 +1,13 @@
-const { getUsers } = require("./src/lib/auth");
+import { ensureSeeded, listUsersInTenant } from "./users";
 
 async function seed() {
-  const users = await getUsers();
+  await ensureSeeded();
+  const users = [...(await listUsersInTenant("demoA")), ...(await listUsersInTenant("demoB"))];
   console.log(`Seeded ${users.length} users:`);
-  users.forEach((u: any) => console.log(`  - ${u.email} (${u.role}/${u.tenant})`));
+  users.forEach((u) => console.log(`  - ${u.email} (${u.role}/${u.tenant})`));
 }
 
-seed().catch(console.error);
+seed().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

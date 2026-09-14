@@ -10,7 +10,7 @@ build:
 	docker compose build
 
 seed:
-	docker compose exec backend node -e "require('./src/lib/seed')"
+	docker compose exec backend npx tsx src/lib/seed.ts
 
 test:
 	cd backend && npx jest --coverage

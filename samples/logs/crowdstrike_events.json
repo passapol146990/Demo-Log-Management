@@ -1,0 +1,68 @@
+[
+  {
+    "source": "crowdstrike",
+    "event_type": "malware_detected",
+    "event_subtype": "detection",
+    "host": "WIN10-01",
+    "process": "powershell.exe",
+    "severity": 8,
+    "action": "quarantine",
+    "user": "demo\\eve",
+    "@timestamp": "2025-08-20T08:00:00Z"
+  },
+  {
+    "source": "crowdstrike",
+    "event_type": "threat_detected",
+    "event_subtype": "alert",
+    "host": "WIN10-02",
+    "process": "mshta.exe",
+    "severity": 9,
+    "action": "blocked",
+    "user": "demo\\frank",
+    "@timestamp": "2025-08-20T08:05:00Z"
+  },
+  {
+    "source": "crowdstrike",
+    "event_type": "malware_detected",
+    "event_subtype": "detection",
+    "host": "LT-SALES-07",
+    "process": "excel.exe",
+    "severity": 6,
+    "action": "quarantine",
+    "user": "demo\\grace",
+    "@timestamp": "2025-08-20T08:10:00Z"
+  },
+  {
+    "source": "crowdstrike",
+    "event_type": "suspicious_process",
+    "event_subtype": "behavioral",
+    "host": "SRV-DB-01",
+    "process": "cmd.exe",
+    "severity": 7,
+    "action": "monitored",
+    "user": "svc_backup",
+    "@timestamp": "2025-08-20T08:15:00Z"
+  },
+  {
+    "source": "crowdstrike",
+    "event_type": "malware_detected",
+    "event_subtype": "detection",
+    "host": "WIN10-03",
+    "process": "rundll32.exe",
+    "severity": 10,
+    "action": "quarantine",
+    "user": "demo\\henry",
+    "@timestamp": "2025-08-20T08:20:00Z"
+  },
+  {
+    "source": "crowdstrike",
+    "event_type": "network_connection",
+    "event_subtype": "c2_beacon",
+    "host": "SRV-WEB-02",
+    "process": "svchost.exe",
+    "severity": 9,
+    "action": "blocked",
+    "dst_ip": "198.51.100.200",
+    "@timestamp": "2025-08-20T08:25:00Z"
+  }
+]

@@ -53,7 +53,23 @@ make test
 ### 7. Access the Application
 - **Frontend**: http://localhost:3000
 - **OpenSearch**: http://localhost:9200
+- **OpenSearch Dashboards**: http://localhost:5601 (browse/query raw index data — see below)
 - **Syslog**: udp://localhost:514
+
+### OpenSearch Dashboards (optional data browser)
+`opensearch-dashboards` is a UI on top of OpenSearch for exploring the raw `logs` index directly —
+useful for debugging ingestion/mapping without writing `curl`/DevTools queries by hand. It ships in
+the same `docker compose` stack and starts automatically with `make up` / `docker compose up -d`.
+
+1. Open http://localhost:5601
+2. Go to **Stack Management → Index Patterns** (or **Discover** will prompt you) and create an index
+   pattern matching `logs*`, using `@timestamp` as the time field
+3. Go to **Discover** to browse/filter/search raw documents, or **Dev Tools** to run queries directly
+   against `http://opensearch:9200` (e.g. `GET logs/_search`)
+
+Security plugin is disabled for this demo stack (`plugins.security.disabled=true`,
+`DISABLE_SECURITY_DASHBOARDS_PLUGIN=true`), matching the same setup as the `opensearch` service —
+this is a local/demo-only configuration.
 
 ### Login Credentials
 - admin@demoA / password123 (admin role, demoA tenant)

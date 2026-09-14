@@ -15,9 +15,12 @@ export default function LoginPage() {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ email, password }),
     });
     if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem("username", data.user?.sub ?? email);
       router.push("/dashboard");
     } else {
       const data = await res.json();

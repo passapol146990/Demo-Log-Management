@@ -1,22 +1,41 @@
-import { checkLoginFailures, triggerWebhook } from "@/lib/alerting";
-import { searchLogs } from "@/lib/opensearch";
+import { evaluateAllRules } from "@/lib/alerting";
+import { listTenants } from "@/lib/tenants";
+import { getWorkerConfig, watchWorkerConfig } from "@/lib/workerConfig";
+
+let currentIntervalMs = 60000;
+let currentTimeout: NodeJS.Timeout | null = null;
 
 async function runAlertCheck() {
   try {
-    const result = await searchLogs({ query: "", tenant: "demoA", size: 100 });
-    const alert = await checkLoginFailures(result);
-    if (alert) {
-      const rule = { webhook_url: process.env.WEBHOOK_URL || "" };
-      await triggerWebhook(alert, rule.webhook_url);
-      console.log("Alert triggered:", alert.rule_name);
+    const tenants = await listTenants();
+    for (const tenant of tenants) {
+      const triggered = await evaluateAllRules(tenant);
+      for (const alert of triggered) {
+        console.log(`Alert triggered [${tenant}]:`, alert.rule_name);
+      }
     }
   } catch (error) {
     console.error("Alert check failed:", error);
   }
 }
 
+function scheduleNext() {
+  if (currentTimeout) clearTimeout(currentTimeout);
+  currentTimeout = setTimeout(() => {
+    runAlertCheck().then(scheduleNext);
+  }, currentIntervalMs);
+}
+
 if (typeof setInterval !== "undefined") {
-  setInterval(runAlertCheck, 60000);
+  const cfg = getWorkerConfig();
+  currentIntervalMs = cfg.alertCheckIntervalMs;
+  console.log(`Alert checker started (interval=${currentIntervalMs}ms)`);
+  watchWorkerConfig((cfg) => {
+    currentIntervalMs = cfg.alertCheckIntervalMs;
+    console.log(`Alert check interval updated to ${currentIntervalMs}ms`);
+    scheduleNext();
+  });
+  scheduleNext();
 }
 
 runAlertCheck();

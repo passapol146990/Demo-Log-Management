@@ -149,6 +149,7 @@ activemq-data/
 
 # Environments
 .env
+.env.deploy
 .envrc
 .venv
 env/
@@ -224,6 +225,5 @@ backend/.env
 backend/*.js
 backend/*.map
 
-# Docs
+# Docs (only ignore templates, not progress or results)
 docs/progress.md
-docs/acceptance_results.md

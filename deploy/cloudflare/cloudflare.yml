@@ -1,0 +1,12 @@
+tunnel: demo-log-management
+credentials-file: /root/.cloudflare/cloudflared.json
+protocol: quic
+
+ingress:
+  - hostname: ${DOMAIN}
+    service: http://backend:3000
+    originRequest:
+      httpHostHeader: ${DOMAIN}
+  - hostname: dashboard.${DOMAIN}
+    service: http://opensearch-dashboards:5601
+  - service: http_status:404

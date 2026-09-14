@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   backend:
     build:
@@ -17,10 +15,8 @@ services:
     depends_on:
       opensearch:
         condition: service_healthy
-      vector:
-        condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/auth/me"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/login"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -29,9 +25,15 @@ services:
       - ./backend/src:/app/src
       - /app/node_modules
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   vector:
-    image: timberio/vector:0.x-distroless-libc
+    image: timberio/vector:latest-distroless-libc
+    command: ["--config", "/etc/vector/vector.toml"]
     ports:
       - "514:514/udp"
       - "514:514/tcp"
@@ -39,15 +41,17 @@ services:
       - ./ingest/vector.toml:/etc/vector/vector.toml:ro
     environment:
       - VECTOR_LOG=${VECTOR_LOG:-info}
+      - VECTOR_INGEST_TOKEN=${VECTOR_INGEST_TOKEN}
+      - VECTOR_DANGEROUSLY_ALLOW_ENV_VAR_INTERPOLATION=true
     depends_on:
       backend:
         condition: service_healthy
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:514"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   opensearch:
     image: opensearchproject/opensearch:latest
@@ -57,6 +61,7 @@ services:
       - "plugins.security.disabled=true"
       - "OPENSEARCH_JAVA_HOME=/usr/share/opensearch/jdk"
       - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_PASSWORD}"
+      - "OPENSEARCH_JAVA_OPTS=-XX:+UnlockExperimentalVMOptions -XX:+UseContainerSupport -Xms512m -Xmx512m"
     ulimits:
       memlock:
         soft: -1
@@ -72,26 +77,82 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:latest
+    environment:
+      - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true"
+    ports:
+      - "5601:5601"
+    volumes:
+      - ./deploy/opensearch_dashboards.yml:/usr/share/opensearch-dashboards/config/opensearch_dashboards.yml:ro
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: ["node", "-e", "require('./src/workers/alertChecker')"]
+    command: ["npx", "tsx", "workers/index.ts"]
     environment:
       - OPENSEARCH_URL=${OPENSEARCH_URL}
       - OPENSEARCH_USER=${OPENSEARCH_USER}
       - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
       - WEBHOOK_URL=${WEBHOOK_URL}
+      - LOG_RETENTION_DAYS=${LOG_RETENTION_DAYS:-7}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - ENRICHMENT_INTERVAL_MS=${ENRICHMENT_INTERVAL_MS:-15000}
+      - ENRICHMENT_BATCH_SIZE=${ENRICHMENT_BATCH_SIZE:-100}
+      - ENRICHMENT_RATE_LIMIT_PER_SEC=${ENRICHMENT_RATE_LIMIT_PER_SEC:-100}
     depends_on:
       opensearch:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/src/config:/app/src/config
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "node -e 'process.exit(0)'"]
       interval: 30s
       timeout: 10s
       retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
 volumes:
   opensearch-data:
+  redis-data:

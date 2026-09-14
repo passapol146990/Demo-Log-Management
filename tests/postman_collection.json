@@ -30,6 +30,14 @@
           }
         },
         {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": {"raw": "http://localhost:3000/api/auth/logout", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "auth", "logout"]}
+          }
+        },
+        {
           "name": "Login Invalid",
           "request": {
             "method": "POST",
@@ -68,6 +76,66 @@
           }
         },
         {
+          "name": "Ingest Firewall",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {"mode": "raw", "raw": "{\"source\": \"firewall\", \"tenant\": \"demoA\", \"action\": \"deny\", \"src_ip\": \"203.0.113.55\", \"dst_ip\": \"10.0.1.5\", \"src_port\": 443, \"dst_port\": 22, \"protocol\": \"tcp\", \"vendor\": \"demo\", \"product\": \"ngfw\", \"severity\": 5}"},
+            "url": {"raw": "http://localhost:3000/api/ingest", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "ingest"]}
+          }
+        },
+        {
+          "name": "Ingest AWS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {"mode": "raw", "raw": "{\"source\": \"aws\", \"tenant\": \"demoA\", \"event_type\": \"ConsoleLogin\", \"event_subtype\": \"login\", \"user\": \"bob\", \"src_ip\": \"198.51.100.20\", \"cloud\": {\"service\": \"signin\", \"account_id\": \"123456789012\", \"region\": \"ap-southeast-1\"}, \"severity\": 3}"},
+            "url": {"raw": "http://localhost:3000/api/ingest", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "ingest"]}
+          }
+        },
+        {
+          "name": "Ingest M365",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {"mode": "raw", "raw": "{\"source\": \"m365\", \"tenant\": \"demoA\", \"event_type\": \"UserLoggedIn\", \"event_subtype\": \"login\", \"user\": \"bob@demo.local\", \"src_ip\": \"198.51.100.23\", \"action\": \"login\", \"severity\": 2}"},
+            "url": {"raw": "http://localhost:3000/api/ingest", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "ingest"]}
+          }
+        },
+        {
+          "name": "Ingest AD",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {"mode": "raw", "raw": "{\"source\": \"ad\", \"tenant\": \"demoA\", \"event_id\": 4624, \"event_type\": \"LogonSuccess\", \"event_subtype\": \"login_success\", \"user\": \"demo\\\\alice\", \"host\": \"DC01\", \"src_ip\": \"10.0.3.10\", \"action\": \"login\", \"severity\": 2}"},
+            "url": {"raw": "http://localhost:3000/api/ingest", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "ingest"]}
+          }
+        },
+        {
+          "name": "Ingest Network",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {"mode": "raw", "raw": "{\"source\": \"network\", \"tenant\": \"demoA\", \"event_type\": \"link-down\", \"host\": \"r1\", \"action\": \"link-down\", \"severity\": 4}"},
+            "url": {"raw": "http://localhost:3000/api/ingest", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "ingest"]}
+          }
+        },
+        {
           "name": "Ingest Invalid Schema",
           "request": {
             "method": "POST",
@@ -76,6 +144,18 @@
               {"key": "Authorization", "value": "Bearer {{token}}"}
             ],
             "body": {"mode": "raw", "raw": "{\"source\": \"invalid_source\"}"},
+            "url": {"raw": "http://localhost:3000/api/ingest", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "ingest"]}
+          }
+        },
+        {
+          "name": "Ingest — Batch (file-batch simulation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {"mode": "raw", "raw": "{\"logs\": [{\"source\": \"api\", \"event_type\": \"access\", \"event_subtype\": \"http\", \"http_method\": \"GET\", \"url\": \"/api/v1/users\", \"status_code\": 200, \"src_ip\": \"203.0.113.10\", \"user\": \"alice\", \"severity\": 2, \"@timestamp\": \"2025-08-20T07:00:00Z\"}, {\"source\": \"crowdstrike\", \"event_type\": \"malware_detected\", \"event_subtype\": \"detection\", \"host\": \"WIN10-01\", \"process\": \"powershell.exe\", \"severity\": 8, \"action\": \"quarantine\", \"user\": \"demo\\\\eve\", \"@timestamp\": \"2025-08-20T08:00:00Z\"}, {\"source\": \"invalid_source\"}]}"},
             "url": {"raw": "http://localhost:3000/api/ingest", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "ingest"]}
           }
         }

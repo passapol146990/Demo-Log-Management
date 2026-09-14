@@ -1,43 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { ingestSchema } from "@/lib/ingest-schema";
 import { ZodError } from "zod";
-import { normalizeApi } from "@/lib/normalizers/api";
-import { normalizeCrowdStrike } from "@/lib/normalizers/crowdstrike";
-import { normalizeAWS } from "@/lib/normalizers/aws";
-import { normalizeM365 } from "@/lib/normalizers/m365";
-import { normalizeAD } from "@/lib/normalizers/ad";
-import { normalizeNetwork } from "@/lib/normalizers/network";
-import { normalizeFirewall } from "@/lib/normalizers/firewall";
+import { normalize, validateAndNormalizeBatch } from "@/lib/ingest-batch";
 import { indexLog } from "@/lib/opensearch";
 
-function normalize(source: string, data: Record<string, unknown>, raw: string) {
-  switch (source) {
-    case "firewall": return normalizeFirewall(raw, data);
-    case "api": return normalizeApi(data);
-    case "crowdstrike": return normalizeCrowdStrike(data);
-    case "aws": return normalizeAWS(data);
-    case "m365": return normalizeM365(data);
-    case "ad": return normalizeAD(data);
-    case "network": return normalizeNetwork(raw, data);
-    default: throw new Error(`Unknown source: ${source}`);
-  }
-}
-
 export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const payload = verifyToken(authHeader.slice(7));
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
+  const auth = requireRole(request, ["admin"]);
+  if (auth instanceof Response) return auth;
+  const { user } = auth;
 
   try {
     const body = await request.json();
+    const tenant = user.tenant;
+
+    // Batch detection: { "logs": [...] } is processed as a file-batch, everything
+    // else falls through to the existing single-object path unchanged.
+    if (typeof body === "object" && body !== null && "logs" in body) {
+      if (!Array.isArray(body.logs)) {
+        return NextResponse.json({ error: "'logs' must be an array" }, { status: 400 });
+      }
+      const { total, results, normalizedLogs } = validateAndNormalizeBatch(body.logs, tenant);
+      for (const { log } of normalizedLogs) {
+        await indexLog(log);
+      }
+      const succeeded = normalizedLogs.length;
+      return NextResponse.json({
+        batch: true,
+        total,
+        succeeded,
+        failed: total - succeeded,
+        results,
+      }, { status: 200 });
+    }
+
     const parsed = ingestSchema.parse(body);
-    const tenant = payload.tenant;
     const data = { ...parsed, tenant };
     const result = normalize(parsed.source, data, JSON.stringify(body));
     await indexLog(result);

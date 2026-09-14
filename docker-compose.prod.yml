@@ -1,0 +1,20 @@
+services:
+  backend:
+    volumes: !reset
+      - ./backend/src/config:/app/src/config
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET}
+      - OPENSEARCH_URL=${OPENSEARCH_URL}
+      - OPENSEARCH_USER=${OPENSEARCH_USER}
+      - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+
+  worker:
+    environment:
+      - NODE_ENV=production
+      - OPENSEARCH_URL=${OPENSEARCH_URL}
+      - OPENSEARCH_USER=${OPENSEARCH_USER}
+      - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - LOG_RETENTION_DAYS=${LOG_RETENTION_DAYS:-7}

@@ -1,0 +1,60 @@
+[
+  {
+    "source": "m365",
+    "event_type": "UserLoggedIn",
+    "event_subtype": "login",
+    "user": "bob@demo.local",
+    "src_ip": "198.51.100.23",
+    "action": "login",
+    "severity": 2,
+    "@timestamp": "2025-08-20T10:05:00Z"
+  },
+  {
+    "source": "m365",
+    "event_type": "FileAccessed",
+    "event_subtype": "file",
+    "user": "carol@demo.local",
+    "src_ip": "198.51.100.31",
+    "action": "read",
+    "severity": 2,
+    "@timestamp": "2025-08-20T10:10:00Z"
+  },
+  {
+    "source": "m365",
+    "event_type": "MailSent",
+    "event_subtype": "mail",
+    "user": "bob@demo.local",
+    "action": "send",
+    "severity": 1,
+    "@timestamp": "2025-08-20T10:15:00Z"
+  },
+  {
+    "source": "m365",
+    "event_type": "UserLoginFailed",
+    "event_subtype": "login_failure",
+    "user": "eve@demo.local",
+    "src_ip": "203.0.113.88",
+    "action": "login",
+    "severity": 6,
+    "@timestamp": "2025-08-20T10:18:00Z"
+  },
+  {
+    "source": "m365",
+    "event_type": "FileShared",
+    "event_subtype": "file",
+    "user": "carol@demo.local",
+    "action": "share",
+    "severity": 4,
+    "@timestamp": "2025-08-20T10:20:00Z"
+  },
+  {
+    "source": "m365",
+    "event_type": "MailboxLoginSuspicious",
+    "event_subtype": "security_alert",
+    "user": "frank@demo.local",
+    "src_ip": "203.0.113.150",
+    "action": "login",
+    "severity": 8,
+    "@timestamp": "2025-08-20T10:25:00Z"
+  }
+]

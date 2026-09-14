@@ -1,81 +1,155 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { authFetch } from "@/hooks/useAuthFetch";
+import { LogEntry, SearchResponse } from "@/lib/types/log";
+import SearchFilters, { SearchFilterValues } from "@/components/dashboard/SearchFilters";
+import LogsTable from "@/components/dashboard/LogsTable";
 
-interface LogEntry {
-  "@timestamp": string;
-  tenant: string;
-  source: string;
-  severity: number;
-  action: string;
-  user: string;
-  src_ip: string;
-  host: string;
-  raw: string;
-}
+const PAGE_SIZE = 25;
+
+const EMPTY_FILTERS: SearchFilterValues = {
+  keyword: "",
+  source: "",
+  user: "",
+  src_ip: "",
+  severityMin: "",
+  from: "",
+  to: "",
+};
 
 export default function SearchPage() {
+  const [filters, setFilters] = useState<SearchFilterValues>(EMPTY_FILTERS);
+  const [appliedFilters, setAppliedFilters] = useState<SearchFilterValues>(EMPTY_FILTERS);
+  const [page, setPage] = useState(0);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [keyword, setKeyword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const search = async () => {
+  const runSearch = useCallback((f: SearchFilterValues, pageIndex: number) => {
     setLoading(true);
-    const token = document.cookie.replace(/(?:(?:^|.*;\s*)token\s*=\s*([^;]*).*$)|^.*$/, "$1");
-    const params = new URLSearchParams({ keyword, from: "", to: "" });
-    const res = await fetch(`/api/search?${params}`, {
-      headers: { "Authorization": `Bearer ${token}` }
+    setError("");
+    const params = new URLSearchParams({
+      keyword: f.keyword,
+      source: f.source,
+      user: f.user,
+      src_ip: f.src_ip,
+      from: f.from,
+      to: f.to,
+      size: String(PAGE_SIZE),
+      page: String(pageIndex),
     });
-    if (res.ok) {
-      const data = await res.json();
-      setLogs(data.hits?.hits?.map((h: any) => h._source) || []);
-    }
-    setLoading(false);
+    if (f.severityMin) params.set("severity_min", f.severityMin);
+
+    authFetch(`/api/search?${params}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Search request failed");
+        return res.json() as Promise<SearchResponse>;
+      })
+      .then((data) => {
+        setLogs(data.hits?.map((h) => h._source) || []);
+        setTotal(data.total?.value ?? 0);
+      })
+      .catch(() => {
+        setError("Failed to load logs. Please try again.");
+        setLogs([]);
+        setTotal(0);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => runSearch(EMPTY_FILTERS, 0), 0);
+    return () => clearTimeout(timer);
+  }, [runSearch]);
+
+  const handleSearch = () => {
+    setAppliedFilters(filters);
+    setPage(0);
+    runSearch(filters, 0);
   };
+
+  const handleReset = () => {
+    setFilters(EMPTY_FILTERS);
+    setAppliedFilters(EMPTY_FILTERS);
+    setPage(0);
+    runSearch(EMPTY_FILTERS, 0);
+  };
+
+  const goToPage = (next: number) => {
+    setPage(next);
+    runSearch(appliedFilters, next);
+  };
+
+  const activeCount = useMemo(
+    () => Object.values(appliedFilters).filter((v) => v !== "").length,
+    [appliedFilters]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const rangeStart = total === 0 ? 0 : page * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(total, (page + 1) * PAGE_SIZE);
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Log Search</h1>
-      <div className="flex gap-2 mb-6">
-        <input
-          type="text"
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          placeholder="Search..."
-          className="flex-1 p-2 bg-zinc-800 text-white rounded border border-gray-600"
-        />
-        <button onClick={search} className="px-4 bg-blue-600 text-white rounded hover:bg-blue-700">
-          Search
-        </button>
+      <div className="flex items-center gap-3 mb-6">
+        <h1 className="text-2xl font-bold">Log Search</h1>
+        {!loading && (
+          <span className="text-xs text-gray-500">
+            {total.toLocaleString()} result{total === 1 ? "" : "s"}
+          </span>
+        )}
       </div>
-      {loading ? <p>Loading...</p> : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-gray-400">
-              <th className="text-left p-2">Time</th>
-              <th className="text-left p-2">Source</th>
-              <th className="text-left p-2">Severity</th>
-              <th className="text-left p-2">Action</th>
-              <th className="text-left p-2">IP</th>
-              <th className="text-left p-2">User</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logs.map((log, i) => (
-              <tr key={i} className="border-t border-zinc-700">
-                <td className="p-2">{new Date(log["@timestamp"]).toLocaleString()}</td>
-                <td className="p-2">{log.source}</td>
-                <td className="p-2">{log.severity}</td>
-                <td className="p-2">{log.action}</td>
-                <td className="p-2">{log.src_ip}</td>
-                <td className="p-2">{log.user}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+
+      <SearchFilters
+        values={filters}
+        onChange={setFilters}
+        onSearch={handleSearch}
+        onReset={handleReset}
+        loading={loading}
+        activeCount={activeCount}
+      />
+
+      <div className="bg-zinc-800 rounded-lg border border-zinc-700 overflow-hidden">
+        {error && <p className="p-4 text-sm text-red-400">{error}</p>}
+        {loading ? (
+          <div className="p-16 flex justify-center">
+            <div className="w-6 h-6 border-2 border-zinc-600 border-t-blue-500 rounded-full animate-spin" />
+          </div>
+        ) : (
+          <>
+            <LogsTable logs={logs} />
+            {total > 0 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-700 text-sm text-gray-400">
+                <span>
+                  Showing {rangeStart}–{rangeEnd} of {total.toLocaleString()}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => goToPage(page - 1)}
+                    disabled={page === 0}
+                    className="p-1.5 rounded border border-zinc-700 hover:bg-zinc-700 disabled:opacity-30 disabled:hover:bg-transparent"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs">
+                    Page {page + 1} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => goToPage(page + 1)}
+                    disabled={page + 1 >= totalPages}
+                    className="p-1.5 rounded border border-zinc-700 hover:bg-zinc-700 disabled:opacity-30 disabled:hover:bg-transparent"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

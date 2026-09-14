@@ -1,0 +1,7 @@
+region         = "us-east-1"
+environment    = "production"
+domain_name    = "logs.example.com"
+cloudflare_zone_id = "abc123"
+cloudflare_api_token = "your_token_here"
+instance_type  = "t3.large"
+jwt_secret     = "supersecret123"

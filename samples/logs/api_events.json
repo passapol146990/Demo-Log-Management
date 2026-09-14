@@ -1,0 +1,86 @@
+[
+  {
+    "source": "api",
+    "event_type": "access",
+    "event_subtype": "http",
+    "http_method": "GET",
+    "url": "/api/v1/users",
+    "status_code": 200,
+    "src_ip": "203.0.113.10",
+    "user": "alice",
+    "severity": 2,
+    "@timestamp": "2025-08-20T07:00:00Z"
+  },
+  {
+    "source": "api",
+    "event_type": "app_login_failed",
+    "event_subtype": "auth",
+    "http_method": "POST",
+    "url": "/api/v1/login",
+    "status_code": 401,
+    "src_ip": "203.0.113.7",
+    "user": "alice",
+    "severity": 5,
+    "@timestamp": "2025-08-20T07:20:00Z"
+  },
+  {
+    "source": "api",
+    "event_type": "access",
+    "event_subtype": "http",
+    "http_method": "POST",
+    "url": "/api/v1/orders",
+    "status_code": 201,
+    "src_ip": "198.51.100.5",
+    "user": "bob",
+    "severity": 2,
+    "@timestamp": "2025-08-20T07:25:00Z"
+  },
+  {
+    "source": "api",
+    "event_type": "access",
+    "event_subtype": "http",
+    "http_method": "DELETE",
+    "url": "/api/v1/orders/123",
+    "status_code": 403,
+    "src_ip": "198.51.100.5",
+    "user": "bob",
+    "severity": 4,
+    "@timestamp": "2025-08-20T07:26:10Z"
+  },
+  {
+    "source": "api",
+    "event_type": "access",
+    "event_subtype": "http",
+    "http_method": "GET",
+    "url": "/api/v1/health",
+    "status_code": 500,
+    "src_ip": "10.0.2.5",
+    "user": "system",
+    "severity": 6,
+    "@timestamp": "2025-08-20T07:30:00Z"
+  },
+  {
+    "source": "api",
+    "event_type": "access",
+    "event_subtype": "http",
+    "http_method": "PUT",
+    "url": "/api/v1/profile",
+    "status_code": 200,
+    "src_ip": "203.0.113.44",
+    "user": "carol",
+    "severity": 2,
+    "@timestamp": "2025-08-20T07:35:00Z"
+  },
+  {
+    "source": "api",
+    "event_type": "access",
+    "event_subtype": "http",
+    "http_method": "GET",
+    "url": "/api/v1/reports",
+    "status_code": 429,
+    "src_ip": "203.0.113.44",
+    "user": "carol",
+    "severity": 3,
+    "@timestamp": "2025-08-20T07:36:00Z"
+  }
+]

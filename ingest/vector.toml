@@ -12,31 +12,50 @@ address = "0.0.0.0:514"
 type = "remap"
 inputs = ["syslog_udp", "syslog_tcp"]
 source = '''
-  .message = parse_syslog(.message) ?? .message
+  raw_msg = .message
+  parsed, err = parse_syslog(.message)
+  ts = now()
+  hostname = ""
+  if err == null {
+    ts = parsed.timestamp
+    hostname = parsed.hostname
+    raw_msg = parsed.message
+  }
+  kv = parse_key_value(raw_msg, key_value_delimiter: "=", field_delimiter: " ") ?? {}
+  . = {}
+  . = set!(., ["@timestamp"], format_timestamp!(ts, "%+"))
   .source = "firewall"
   .vendor = "firewall"
   .product = "network"
   .event_type = "network"
   .event_subtype = "syslog"
   .severity = 5
-'''
-
-[transforms.add_source_field]
-type = "remap"
-inputs = ["parse_syslog"]
-source = '''
-  .source = "firewall"
-  .raw = .message
+  .msg = kv.msg || ""
+  .src_ip = kv.src || ""
+  .dst_ip = kv.dst || ""
+  .protocol = kv.proto || ""
+  .src_port = to_int(kv.sport) ?? 0
+  .dst_port = to_int(kv.dport) ?? 0
+  .host = hostname
+  .raw = raw_msg
 '''
 
 [sinks.backend]
 type = "http"
-inputs = ["add_source_field"]
-endpoint = "http://backend:3000/api/ingest"
-encoding = "json"
-headers = { "Content-Type" = "application/json", "X-Source" = "firewall" }
+inputs = ["parse_syslog"]
+uri = "http://backend:3000/api/ingest"
+encoding.codec = "json"
+framing.method = "newline_delimited"
+batch.max_events = 1
+
+[sinks.backend.auth]
+strategy = "bearer"
+token = "${VECTOR_INGEST_TOKEN}"
+
+[sinks.backend.request.headers]
+X-Source = "firewall"
 
 [sinks.dashboard]
 type = "console"
-inputs = ["add_source_field"]
+inputs = ["parse_syslog"]
 encoding.codec = "json"

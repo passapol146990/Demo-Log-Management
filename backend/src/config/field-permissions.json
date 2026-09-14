@@ -1,0 +1,9 @@
+{
+  "rules": [
+    {
+      "role": "viewer",
+      "tenant": "*",
+      "hiddenFields": ["raw"]
+    }
+  ]
+}

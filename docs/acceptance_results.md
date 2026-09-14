@@ -13,6 +13,10 @@
 - **Test**: `npx jest tests/normalizers.test.ts` - All 6 normalizers tested
 - **Result**: PASS
 - **Evidence**: 7 tests in normalizers.test.ts, all passing
+- **Note**: `POST /api/ingest` supports both single-object ingestion (existing) and
+  file-batch ingestion (`{ "logs": [...] }`, per-item validation with partial-success
+  summary), satisfying the assignment's 2.2 "File batch" ingestion requirement. See
+  `backend/src/lib/ingest-batch.ts` and `tests/ingest.test.ts` ("Batch Ingest" suite).
 
 ### 2. All logs normalized to central schema ✅
 - **Schema**: `/backend/src/lib/schema.ts` - LogEntry interface with all required fields
@@ -58,8 +62,8 @@
 
 ### 9. All tests passing ✅
 - **Command**: `npx jest`
-- **Result**: 29/29 tests passing across 6 test suites
-- **Coverage**: All normalizers 100%, ingest-schema 100%
+- **Result**: 45/45 tests passing across 6 test suites
+- **Coverage**: All normalizers 100%, ingest-schema 100%, batch ingest validation covered
 - **Evidence**: `PASS ../tests/*.test.ts` - All test suites passing
 
 ### 10. Documentation complete ✅
@@ -105,7 +109,7 @@
 | 6. Dashboard UI | ✅ PASS | Recharts + tables |
 | 7. Alerting | ✅ PASS | Alert rules + webhook |
 | 8. Deployable | ✅ PASS | docker-compose + docs |
-| 9. All tests | ✅ PASS | 29/29 passing |
+| 9. All tests | ✅ PASS | 45/45 passing |
 | 10. Documentation | ✅ PASS | 6+ docs files |
 | 11. Postman | ✅ PASS | Collection JSON |
 | 12. Browser login | ✅ PASS | Login page built |

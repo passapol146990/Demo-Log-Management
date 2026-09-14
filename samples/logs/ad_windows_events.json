@@ -1,0 +1,86 @@
+[
+  {
+    "source": "ad",
+    "event_id": 4624,
+    "event_type": "LogonSuccess",
+    "event_subtype": "login_success",
+    "user": "demo\\alice",
+    "host": "DC01",
+    "src_ip": "10.0.3.10",
+    "action": "login",
+    "severity": 2,
+    "@timestamp": "2025-08-20T11:00:00Z"
+  },
+  {
+    "source": "ad",
+    "event_id": 4634,
+    "event_type": "LogoffSuccess",
+    "event_subtype": "logoff",
+    "user": "demo\\alice",
+    "host": "DC01",
+    "src_ip": "10.0.3.10",
+    "action": "logout",
+    "severity": 1,
+    "@timestamp": "2025-08-20T11:05:00Z"
+  },
+  {
+    "source": "ad",
+    "event_id": 4625,
+    "event_type": "LogonFailed",
+    "event_subtype": "login_failure",
+    "user": "demo\\eve",
+    "host": "DC01",
+    "src_ip": "203.0.113.77",
+    "action": "login",
+    "severity": 6,
+    "@timestamp": "2025-08-20T11:11:00Z"
+  },
+  {
+    "source": "ad",
+    "event_id": 4625,
+    "event_type": "LogonFailed",
+    "event_subtype": "login_failure",
+    "user": "demo\\eve",
+    "host": "DC01",
+    "src_ip": "203.0.113.77",
+    "action": "login",
+    "severity": 6,
+    "@timestamp": "2025-08-20T11:12:00Z"
+  },
+  {
+    "source": "ad",
+    "event_id": 4625,
+    "event_type": "LogonFailed",
+    "event_subtype": "login_failure",
+    "user": "demo\\eve",
+    "host": "DC01",
+    "src_ip": "203.0.113.77",
+    "action": "login",
+    "severity": 6,
+    "@timestamp": "2025-08-20T11:13:00Z"
+  },
+  {
+    "source": "ad",
+    "event_id": 4625,
+    "event_type": "LogonFailed",
+    "event_subtype": "login_failure",
+    "user": "demo\\eve",
+    "host": "DC01",
+    "src_ip": "203.0.113.77",
+    "action": "login",
+    "severity": 6,
+    "@timestamp": "2025-08-20T11:14:00Z"
+  },
+  {
+    "source": "ad",
+    "event_id": 4625,
+    "event_type": "LogonFailed",
+    "event_subtype": "login_failure",
+    "user": "demo\\eve",
+    "host": "DC01",
+    "src_ip": "203.0.113.77",
+    "action": "login",
+    "severity": 6,
+    "@timestamp": "2025-08-20T11:15:00Z"
+  }
+]

@@ -1,99 +1,129 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { authFetch } from "@/hooks/useAuthFetch";
+import { LogEntry, SearchResponse } from "@/lib/types/log";
+import { topByField, timelineBuckets, severityDistribution } from "@/lib/aggregations";
+import { useAlerts } from "@/contexts/AlertsContext";
+import StatCard from "@/components/dashboard/StatCard";
+import TopNChart from "@/components/dashboard/TopNChart";
+import TimelineChart from "@/components/dashboard/TimelineChart";
+import SeverityChart from "@/components/dashboard/SeverityChart";
+import LogsTable from "@/components/dashboard/LogsTable";
+import DashboardFilters from "@/components/dashboard/DashboardFilters";
+import ResetSystemButton from "@/components/dashboard/ResetSystemButton";
 
-interface LogEntry {
-  "@timestamp": string;
-  tenant: string;
-  source: string;
-  severity: number;
-  action: string;
-  user: string;
-  src_ip: string;
-  host: string;
-  event_type: string;
-}
+const AUTO_REFRESH_MS = 5000;
 
 export default function DashboardPage() {
+  const { alerts } = useAlerts();
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [source, setSource] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const filtersRef = useRef({ source, from, to });
+  useEffect(() => {
+    filtersRef.current = { source, from, to };
+  }, [source, from, to]);
 
   useEffect(() => {
-    const token = document.cookie.replace(/(?:(?:^|.*;\s*)token\s*=\s*([^;]*).*$)|^.*$/, "$1");
-    if (!token) return;
-    fetch("/api/search?keyword=&from=&to=", {
-      headers: { "Authorization": `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => {
-        const hits = data.hits?.hits?.map((h: any) => h._source) || [];
-        setLogs(hits);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    const timer = setTimeout(() => {
+      authFetch("/api/auth/me")
+        .then((res) => res.json())
+        .then((data) => setIsAdmin(data.user?.role === "admin"))
+        .catch(() => {});
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
-  const severityData = logs.reduce((acc: any, log: LogEntry) => {
-    const key = String(log.severity);
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {});
+  const fetchLogs = useCallback((params: { source: string; from: string; to: string }, showSpinner: boolean) => {
+    if (showSpinner) setLoading(true);
+    const query = new URLSearchParams({
+      keyword: "",
+      from: params.from,
+      to: params.to,
+      source: params.source,
+      size: "1000",
+    });
+    authFetch(`/api/search?${query}`)
+      .then((res) => res.json() as Promise<SearchResponse>)
+      .then((searchData) => setLogs(searchData.hits?.map((h) => h._source) || []))
+      .catch(() => {})
+      .finally(() => {
+        if (showSpinner) setLoading(false);
+      });
+  }, []);
 
-  const chartData = Object.entries(severityData).map(([severity, count]) => ({ severity, count }));
+  useEffect(() => {
+    fetchLogs(filtersRef.current, true);
+    const timer = setInterval(() => fetchLogs(filtersRef.current, false), AUTO_REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [fetchLogs]);
+
+  const applyFilters = () => fetchLogs({ source, from, to }, true);
+
+  const resetFilters = () => {
+    setSource("");
+    setFrom("");
+    setTo("");
+    fetchLogs({ source: "", from: "", to: "" }, true);
+  };
+
+  const topSources = topByField(logs, "source");
+  const topUsers = topByField(logs, "user");
+  const topSrcIps = topByField(logs, "src_ip");
+  const timeline = timelineBuckets(logs);
+  const severity = severityDistribution(logs);
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+      <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <span className="flex items-center gap-1.5 text-xs text-gray-500">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            Live · refreshes every 5s
+          </span>
+        </div>
+        {isAdmin && <ResetSystemButton onReset={() => fetchLogs(filtersRef.current, true)} />}
+      </div>
+      <DashboardFilters
+        source={source}
+        from={from}
+        to={to}
+        onSourceChange={setSource}
+        onFromChange={setFrom}
+        onToChange={setTo}
+        onApply={applyFilters}
+        onReset={resetFilters}
+        loading={loading}
+      />
       {loading ? (
         <p>Loading...</p>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-4 mb-8">
-            <div className="bg-zinc-800 p-4 rounded">
-              <h3 className="text-gray-400 mb-2">Total Logs</h3>
-              <p className="text-3xl font-bold">{logs.length}</p>
-            </div>
-            <div className="bg-zinc-800 p-4 rounded">
-              <h3 className="text-gray-400 mb-2">Sources</h3>
-              <p className="text-3xl font-bold">{new Set(logs.map(l => l.source)).size}</p>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <StatCard label="Total Logs" value={logs.length} />
+            <StatCard label="Sources" value={new Set(logs.map((l) => l.source)).size} />
+            <StatCard label="Alerts Triggered" value={alerts.length} />
           </div>
-          <div className="bg-zinc-800 p-4 rounded mb-8">
-            <h3 className="text-gray-400 mb-4">Severity Distribution</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
-                <XAxis dataKey="severity" stroke="#9ca3af" />
-                <YAxis stroke="#9ca3af" />
-                <Tooltip />
-                <Bar dataKey="count" fill="#3b82f6" />
-              </BarChart>
-            </ResponsiveContainer>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+            <TopNChart title="Top Source" data={topSources} />
+            <TopNChart title="Top User" data={topUsers} />
+            <TopNChart title="Top Src IP" data={topSrcIps} />
           </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+            <TimelineChart data={timeline} />
+            <SeverityChart data={severity} />
+          </div>
+
           <div className="bg-zinc-800 p-4 rounded">
             <h3 className="text-gray-400 mb-4">Recent Logs</h3>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-gray-400">
-                  <th className="text-left p-2">Time</th>
-                  <th className="text-left p-2">Source</th>
-                  <th className="text-left p-2">Severity</th>
-                  <th className="text-left p-2">Action</th>
-                  <th className="text-left p-2">User</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.slice(0, 10).map((log, i) => (
-                  <tr key={i} className="border-t border-zinc-700">
-                    <td className="p-2">{new Date(log["@timestamp"]).toLocaleString()}</td>
-                    <td className="p-2">{log.source}</td>
-                    <td className="p-2">{log.severity}</td>
-                    <td className="p-2">{log.action}</td>
-                    <td className="p-2">{log.user}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <LogsTable logs={logs} limit={10} />
           </div>
         </>
       )}

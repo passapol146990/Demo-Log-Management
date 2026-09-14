@@ -6,6 +6,7 @@ import { normalizeAD } from "@/lib/normalizers/ad";
 import { normalizeNetwork } from "@/lib/normalizers/network";
 import { normalizeFirewall } from "@/lib/normalizers/firewall";
 import { ingestSchema } from "@/lib/ingest-schema";
+import { validateAndNormalizeBatch } from "@/lib/ingest-batch";
 
 describe("Ingest Endpoint", () => {
   test("ingestSchema validates API source", () => {
@@ -98,5 +99,64 @@ describe("Ingest Endpoint", () => {
       const fn = (() => { throw new Error("Unknown source: unknown") })();
       return fn;
     }).toThrow("Unknown source");
+  });
+});
+
+describe("Batch Ingest", () => {
+  test("all-valid batch reports full success with per-item ok results", () => {
+    const items = [
+      { source: "api", severity: 3 },
+      { source: "crowdstrike", severity: 9 },
+    ];
+    const { total, results, normalizedLogs } = validateAndNormalizeBatch(items, "demoA");
+    expect(total).toBe(2);
+    expect(results).toEqual([
+      { index: 0, status: "ok" },
+      { index: 1, status: "ok" },
+    ]);
+    expect(normalizedLogs).toHaveLength(2);
+    expect(normalizedLogs[0].log.source).toBe("api");
+    expect(normalizedLogs[1].log.source).toBe("crowdstrike");
+  });
+
+  test("mixed valid/invalid batch reports partial success and preserves indexes", () => {
+    const items = [
+      { source: "api", severity: 3 },
+      { source: "invalid-source" },
+      { source: "aws", severity: 11 },
+      { source: "ad", severity: 6 },
+    ];
+    const { total, results, normalizedLogs } = validateAndNormalizeBatch(items, "demoA");
+    expect(total).toBe(4);
+    expect(normalizedLogs).toHaveLength(2);
+    expect(normalizedLogs.map((n) => n.index)).toEqual([0, 3]);
+
+    expect(results[0]).toEqual({ index: 0, status: "ok" });
+    expect(results[1].status).toBe("error");
+    expect(results[1].error).toMatch(/Validation failed/);
+    expect(results[2].status).toBe("error");
+    expect(results[2].error).toMatch(/Validation failed/);
+    expect(results[3]).toEqual({ index: 3, status: "ok" });
+  });
+
+  test("all-invalid batch reports zero successes", () => {
+    const items = [{ source: "nope" }, { severity: 20 }];
+    const { total, results, normalizedLogs } = validateAndNormalizeBatch(items, "demoA");
+    expect(total).toBe(2);
+    expect(normalizedLogs).toHaveLength(0);
+    expect(results.every((r) => r.status === "error")).toBe(true);
+  });
+
+  test("empty batch reports zero total with no results", () => {
+    const { total, results, normalizedLogs } = validateAndNormalizeBatch([], "demoA");
+    expect(total).toBe(0);
+    expect(results).toEqual([]);
+    expect(normalizedLogs).toEqual([]);
+  });
+
+  test("tenant from JWT is applied to every normalized item, ignoring any tenant in the item", () => {
+    const items = [{ source: "api", tenant: "attacker-tenant", severity: 3 }];
+    const { normalizedLogs } = validateAndNormalizeBatch(items, "demoA");
+    expect(normalizedLogs[0].log.tenant).toBe("demoA");
   });
 });

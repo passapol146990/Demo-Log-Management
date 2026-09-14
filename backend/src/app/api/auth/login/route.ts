@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { login } from "@/lib/auth";
-import { findUser } from "@/lib/auth";
-import { verifyToken } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +19,7 @@ export async function POST(request: NextRequest) {
       path: "/",
     });
     return response;
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

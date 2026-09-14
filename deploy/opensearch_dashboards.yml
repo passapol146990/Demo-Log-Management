@@ -1,0 +1,8 @@
+opensearch.hosts: [http://opensearch:9200]
+opensearch.ssl.verificationMode: none
+
+server.host: '0.0.0.0'
+
+data_source.enabled: true
+workspace.enabled: true
+explore.enabled: true

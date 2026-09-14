@@ -4,22 +4,18 @@
 Log data is automatically cleaned up based on age to maintain system performance and storage efficiency.
 
 ## Configuration
-- **Retention Period**: 7 days (configurable via `RETENTION_DAYS` env variable)
+- **Retention Period**: 7 days (configurable via `LOG_RETENTION_DAYS` env variable)
 - **Cleanup Method**: OpenSearch deleteByQuery
-- **Schedule**: Runs automatically when the worker starts and on a cron basis
+- **Schedule**: Runs automatically on `worker` service start, then every 24 hours
 
 ## Implementation
-The `deleteOldLogs` function in `/backend/src/lib/opensearch.ts` removes logs older than the configured threshold:
+The `deleteOldLogs` function in `/backend/src/lib/opensearch.ts` removes logs older than the configured threshold. It is scheduled by `/backend/workers/retentionWorker.ts`, which runs inside the `worker` container (loaded via `/backend/workers/index.ts` alongside `alertChecker.ts`):
 
 ```typescript
-await deleteOldLogs(7); // Delete logs older than 7 days
+await deleteOldLogs(Number(process.env.LOG_RETENTION_DAYS) || 7);
 ```
 
-## Manual Cleanup
-```bash
-# Run cleanup manually in the backend container
-docker compose exec backend node -e "require('./src/lib/opensearch').deleteOldLogs(7)"
-```
+Check `docker logs <worker-container>` to confirm the cleanup ran — it logs `Retention worker started` on boot and `Retention: deleted logs older than N days` after each cleanup.
 
 ## Index Rollover
 For high-volume environments, consider configuring OpenSearch Index State Management (ISM):
