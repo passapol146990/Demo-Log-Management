@@ -4,7 +4,7 @@ Send each line of logs/firewall_syslog.txt as a UDP syslog message to the
 collector (Vector) to exercise the syslog ingestion path end to end.
 
 Usage:
-  ./2_send_syslog.py [--host localhost] [--port 514] [--file ../logs/firewall_syslog.txt] [--delay 0.2]
+  ./2_send_syslog.py [--host 10.212.51.110] [--port 514] [--file ../logs/firewall_syslog.txt] [--delay 0.2]
 """
 import argparse
 import socket
@@ -13,11 +13,12 @@ import time
 from pathlib import Path
 
 DEFAULT_FILE = Path(__file__).resolve().parent.parent / "logs" / "firewall_syslog.txt"
+DEFAULT_HOST = "10.212.51.110"
 
 
 def main():
     parser = argparse.ArgumentParser(description="Send firewall syslog lines over UDP to Vector.")
-    parser.add_argument("--host", default="localhost", help="syslog target host")
+    parser.add_argument("--host", default=DEFAULT_HOST, help="syslog target host")
     parser.add_argument("--port", type=int, default=514, help="syslog target port (UDP)")
     parser.add_argument("--file", type=Path, default=DEFAULT_FILE, help="ไฟล์ syslog ที่จะยิง")
     parser.add_argument("--delay", type=float, default=0.2, help="หน่วงระหว่างแต่ละบรรทัด (วินาที)")

@@ -4,7 +4,7 @@ Enable the "Login Failures" alert rule, then send N AD 4625 events from one
 source IP so the alert worker fires on its next cycle (~10s).
 
 Usage:
-  ./4_demo_login_failure_alert.py [--host http://localhost:3000] [--count 5]
+  ./4_demo_login_failure_alert.py [--host https://besides-finals-coast-tabs.trycloudflare.com] [--count 5]
 """
 import argparse
 import sys
@@ -13,14 +13,15 @@ from common import add_connection_args, http_json, login
 
 SAME_IP = "203.0.113.99"
 RULE_NAME = "Login Failures"
+DEFAULT_HOST = "https://besides-finals-coast-tabs.trycloudflare.com"
 
 
 def main():
     parser = argparse.ArgumentParser(description="Demo the login-failure alert pipeline.")
     add_connection_args(parser)
+    parser.set_defaults(host=DEFAULT_HOST)
     parser.add_argument("--count", type=int, default=5, help="จำนวน event login_failure ที่จะยิง")
     args = parser.parse_args()
-
     token = login(args.host, args.email, args.password)
     print(f"Logged in as {args.email}")
 

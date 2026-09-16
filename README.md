@@ -20,9 +20,17 @@ Syslog:    udp://localhost:514
 ---
 # Test ingest Logs
 ```
-./samples/scripts/1_send_examples.py 
+./samples/scripts/1_send_examples.py // VPN IP
 ```
 # Test Alert Warning
 ```
-./samples/scripts/4_demo_login_failure_alert.py 
+./samples/scripts/4_demo_login_failure_alert.py // [/]
 ```
+
+# Default Login Credentials
+| Email | Password | Role | Tenant |
+|---|---|---|---|
+| admin@demoA | password123 | admin | demoA |
+| viewer@demoA | password123 | viewer | demoA |
+| admin@demoB | password123 | admin | demoB |
+| viewer@demoB | password123 | viewer | demoB |
