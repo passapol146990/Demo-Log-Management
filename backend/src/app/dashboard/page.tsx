@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authFetch } from "@/hooks/useAuthFetch";
 import { LogEntry, SearchResponse } from "@/lib/types/log";
 import { topByField, timelineBuckets, severityDistribution } from "@/lib/aggregations";
@@ -13,62 +14,68 @@ import LogsTable from "@/components/dashboard/LogsTable";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import ResetSystemButton from "@/components/dashboard/ResetSystemButton";
 
-const AUTO_REFRESH_MS = 5000;
+interface DashboardFilterValues {
+  source: string;
+  from: string;
+  to: string;
+}
+
+async function fetchDashboardLogs(filters: DashboardFilterValues): Promise<LogEntry[]> {
+  const query = new URLSearchParams({
+    keyword: "",
+    from: filters.from,
+    to: filters.to,
+    source: filters.source,
+    size: "1000",
+  });
+  const res = await authFetch(`/api/search?${query}`);
+  if (!res.ok) throw new Error("Failed to fetch logs");
+  const data: SearchResponse = await res.json();
+  return data.hits?.map((h) => h._source) || [];
+}
+
+async function fetchIsAdmin(): Promise<boolean> {
+  const res = await authFetch("/api/auth/me");
+  const data = await res.json();
+  return data.user?.role === "admin";
+}
 
 export default function DashboardPage() {
   const { alerts } = useAlerts();
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const queryClient = useQueryClient();
   const [source, setSource] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const filtersRef = useRef({ source, from, to });
-  useEffect(() => {
-    filtersRef.current = { source, from, to };
-  }, [source, from, to]);
+  const [appliedFilters, setAppliedFilters] = useState<DashboardFilterValues>({ source: "", from: "", to: "" });
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      authFetch("/api/auth/me")
-        .then((res) => res.json())
-        .then((data) => setIsAdmin(data.user?.role === "admin"))
-        .catch(() => {});
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
+  const { data: isAdmin = false } = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: fetchIsAdmin,
+    staleTime: Infinity,
+    refetchInterval: false,
+  });
 
-  const fetchLogs = useCallback((params: { source: string; from: string; to: string }, showSpinner: boolean) => {
-    if (showSpinner) setLoading(true);
-    const query = new URLSearchParams({
-      keyword: "",
-      from: params.from,
-      to: params.to,
-      source: params.source,
-      size: "1000",
-    });
-    authFetch(`/api/search?${query}`)
-      .then((res) => res.json() as Promise<SearchResponse>)
-      .then((searchData) => setLogs(searchData.hits?.map((h) => h._source) || []))
-      .catch(() => {})
-      .finally(() => {
-        if (showSpinner) setLoading(false);
-      });
-  }, []);
+  const {
+    data: logs = [],
+    isLoading: loading,
+    refetch,
+  } = useQuery({
+    queryKey: ["dashboard-logs", appliedFilters],
+    queryFn: () => fetchDashboardLogs(appliedFilters),
+  });
 
-  useEffect(() => {
-    fetchLogs(filtersRef.current, true);
-    const timer = setInterval(() => fetchLogs(filtersRef.current, false), AUTO_REFRESH_MS);
-    return () => clearInterval(timer);
-  }, [fetchLogs]);
-
-  const applyFilters = () => fetchLogs({ source, from, to }, true);
+  const applyFilters = () => setAppliedFilters({ source, from, to });
 
   const resetFilters = () => {
     setSource("");
     setFrom("");
     setTo("");
-    fetchLogs({ source: "", from: "", to: "" }, true);
+    setAppliedFilters({ source: "", from: "", to: "" });
+  };
+
+  const handleSystemReset = () => {
+    queryClient.invalidateQueries({ queryKey: ["dashboard-logs"] });
+    refetch();
   };
 
   const topSources = topByField(logs, "source");
@@ -87,7 +94,7 @@ export default function DashboardPage() {
             Live · refreshes every 5s
           </span>
         </div>
-        {isAdmin && <ResetSystemButton onReset={() => fetchLogs(filtersRef.current, true)} />}
+        {isAdmin && <ResetSystemButton onReset={handleSystemReset} />}
       </div>
       <DashboardFilters
         source={source}

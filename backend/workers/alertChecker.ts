@@ -1,9 +1,5 @@
-import { evaluateAllRules } from "@/lib/alerting";
+import { evaluateAllRules, ALERT_CHECK_INTERVAL_MS } from "@/lib/alerting";
 import { listTenants } from "@/lib/tenants";
-import { getWorkerConfig, watchWorkerConfig } from "@/lib/workerConfig";
-
-let currentIntervalMs = 60000;
-let currentTimeout: NodeJS.Timeout | null = null;
 
 async function runAlertCheck() {
   try {
@@ -19,23 +15,9 @@ async function runAlertCheck() {
   }
 }
 
-function scheduleNext() {
-  if (currentTimeout) clearTimeout(currentTimeout);
-  currentTimeout = setTimeout(() => {
-    runAlertCheck().then(scheduleNext);
-  }, currentIntervalMs);
-}
-
 if (typeof setInterval !== "undefined") {
-  const cfg = getWorkerConfig();
-  currentIntervalMs = cfg.alertCheckIntervalMs;
-  console.log(`Alert checker started (interval=${currentIntervalMs}ms)`);
-  watchWorkerConfig((cfg) => {
-    currentIntervalMs = cfg.alertCheckIntervalMs;
-    console.log(`Alert check interval updated to ${currentIntervalMs}ms`);
-    scheduleNext();
-  });
-  scheduleNext();
+  console.log(`Alert checker started (interval=${ALERT_CHECK_INTERVAL_MS}ms)`);
+  setInterval(runAlertCheck, ALERT_CHECK_INTERVAL_MS);
 }
 
 runAlertCheck();

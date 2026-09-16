@@ -1,0 +1,30 @@
+export function normalizeFirewall(raw: string, data: Record<string, unknown>): Record<string, unknown> {
+  const tags = (data.tags as string[]) || [];
+  return {
+    "@timestamp": (data["@timestamp"] as string) || new Date().toISOString(),
+    tenant: (data.tenant as string) || "demoA",
+    source: "firewall",
+    vendor: (data.vendor as string) || "firewall",
+    product: (data.product as string) || "firewall",
+    event_type: (data.event_type as string) || "network",
+    event_subtype: (data.event_subtype as string) || "drop",
+    severity: (data.severity as number) ?? 7,
+    action: (data.action as string) || (data.msg as string) || "",
+    src_ip: (data.src_ip as string) || "",
+    src_port: (data.src_port as number) || 0,
+    dst_ip: (data.dst_ip as string) || "",
+    dst_port: (data.dst_port as number) || 0,
+    protocol: (data.protocol as string) || "",
+    user: (data.user as string) || "",
+    host: (data.host as string) || "",
+    process: (data.process as string) || "",
+    url: "",
+    http_method: "",
+    status_code: 0,
+    rule_name: (data.rule_name as string) || "",
+    rule_id: (data.rule_id as string) || "",
+    cloud: { account_id: "", region: "", service: "" },
+    raw: raw,
+    _tags: ["firewall", ...tags],
+  };
+}

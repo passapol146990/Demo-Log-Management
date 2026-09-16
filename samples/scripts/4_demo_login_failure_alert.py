@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Enable the "Login Failures" alert rule, then send N AD 4625 events from one
-source IP so the alert worker fires on its next cycle (~60s).
+source IP so the alert worker fires on its next cycle (~10s).
 
 Usage:
   ./4_demo_login_failure_alert.py [--host http://localhost:3000] [--count 5]
@@ -50,7 +50,7 @@ def main():
     else:
         print(f"Ingest failed: {status} {body}")
 
-    print("Worker evaluates every 60s. Watch the dashboard bell/toast, or run:")
+    print("Worker evaluates every 10s. Watch the dashboard bell/toast, or run:")
     print(f'  curl -s {args.host}/api/alerts -H "Authorization: Bearer <TOKEN>"')
 
 

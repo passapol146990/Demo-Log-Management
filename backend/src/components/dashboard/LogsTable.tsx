@@ -13,6 +13,48 @@ function SourceBadge({ source }: { source: string }) {
   );
 }
 
+function EnrichmentSection({ log }: { log: LogEntry }) {
+  const hasEnrichment =
+    log.src_ip_geo || log.dst_ip_geo || log.src_ip_hostname || log.dst_ip_hostname;
+  if (!hasEnrichment) return null;
+
+  const rows: [string, string][] = [];
+  if (log.src_ip_geo) {
+    rows.push([
+      "src_ip location",
+      `${log.src_ip_geo.city || "?"}, ${log.src_ip_geo.country || "?"} (${log.src_ip_geo.timezone || "?"})`,
+    ]);
+  }
+  if (log.src_ip_hostname) {
+    rows.push(["src_ip hostname", `${log.src_ip_hostname.hostname} · ${log.src_ip_hostname.provider}`]);
+  }
+  if (log.dst_ip_geo) {
+    rows.push([
+      "dst_ip location",
+      `${log.dst_ip_geo.city || "?"}, ${log.dst_ip_geo.country || "?"} (${log.dst_ip_geo.timezone || "?"})`,
+    ]);
+  }
+  if (log.dst_ip_hostname) {
+    rows.push(["dst_ip hostname", `${log.dst_ip_hostname.hostname} · ${log.dst_ip_hostname.provider}`]);
+  }
+
+  return (
+    <div className="mb-3 pt-3 border-t border-zinc-800">
+      <span className="text-xs text-gray-500 uppercase tracking-wide">
+        Enrichment {log.enriched_at && `· ${new Date(log.enriched_at).toLocaleString()}`}
+      </span>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-2 mt-2">
+        {rows.map(([k, v]) => (
+          <div key={k}>
+            <span className="text-xs text-gray-500">{k}</span>
+            <p className="text-sm text-gray-200 truncate">{v}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DetailRow({ log }: { log: LogEntry }) {
   const fields: [string, string | number][] = (
     [
@@ -44,6 +86,7 @@ function DetailRow({ log }: { log: LogEntry }) {
             </div>
           ))}
         </div>
+        <EnrichmentSection log={log} />
         {log.raw && (
           <details className="mt-2">
             <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-300">Raw payload</summary>

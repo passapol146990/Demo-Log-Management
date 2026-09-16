@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { authFetch } from "@/hooks/useAuthFetch";
@@ -8,65 +9,25 @@ import { AlertRule } from "@/lib/types/alertRule";
 import { severityBadgeClass } from "@/lib/severity";
 import AlertRuleForm from "@/components/dashboard/AlertRuleForm";
 
+async function fetchRulesList(): Promise<AlertRule[]> {
+  const res = await authFetch("/api/alert-rules");
+  const data = await res.json();
+  return data.rules || [];
+}
+
 export default function AlertRulesManager() {
-  const [rules, setRules] = useState<AlertRule[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [intervalSec, setIntervalSec] = useState<number>(60);
-  const [updatingInterval, setUpdatingInterval] = useState(false);
 
-  const fetchConfig = useCallback(() => {
-    authFetch("/api/worker-config")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.alertCheckIntervalMs) {
-          setIntervalSec(Math.round(data.alertCheckIntervalMs / 1000));
-        }
-      })
-      .catch(() => {});
-  }, []);
+  const { data: rules = [], isLoading: loading } = useQuery({
+    queryKey: ["alert-rules"],
+    queryFn: fetchRulesList,
+  });
 
-  const handleSaveInterval = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setUpdatingInterval(true);
-    try {
-      const res = await authFetch("/api/worker-config", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ alertCheckIntervalMs: intervalSec * 1000 }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "Failed to update interval");
-        return;
-      }
-      toast.success(`Worker check interval set to ${intervalSec}s`);
-    } catch {
-      toast.error("Failed to update interval");
-    } finally {
-      setUpdatingInterval(false);
-    }
-  };
-
-  const fetchRules = useCallback(() => {
-    setLoading(true);
-    authFetch("/api/alert-rules")
-      .then((res) => res.json())
-      .then((data) => setRules(data.rules || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchRules();
-      fetchConfig();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [fetchRules, fetchConfig]);
+  const invalidateRules = () => queryClient.invalidateQueries({ queryKey: ["alert-rules"] });
 
   const handleToggleEnabled = async (rule: AlertRule) => {
     setBusyId(rule.id);
@@ -82,7 +43,7 @@ export default function AlertRulesManager() {
         return;
       }
       toast.success(`Rule "${rule.name}" ${!rule.enabled ? "enabled" : "disabled"}`);
-      fetchRules();
+      invalidateRules();
     } catch {
       toast.error("Failed to update rule");
     } finally {
@@ -105,7 +66,7 @@ export default function AlertRulesManager() {
       }
       toast.success(`Rule "${rule.name}" deleted`);
       setDeleteTarget(null);
-      fetchRules();
+      invalidateRules();
     } catch {
       toast.error("Failed to delete rule");
     } finally {
@@ -124,33 +85,6 @@ export default function AlertRulesManager() {
   return (
     <div className="space-y-4">
       <div className="bg-zinc-800 rounded-lg border border-zinc-700 p-4">
-        <h3 className="text-sm font-medium text-white mb-3">Worker Configuration</h3>
-        <form onSubmit={handleSaveInterval} className="flex items-end gap-3">
-          <div className="flex-1">
-            <label className="block text-xs text-gray-400 mb-1">Alert Check Interval (seconds)</label>
-            <input
-              type="number"
-              min="1"
-              max="3600"
-              value={intervalSec}
-              onChange={(e) => setIntervalSec(Number(e.target.value))}
-              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-md text-sm text-white focus:outline-none focus:border-blue-500"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={updatingInterval}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
-          >
-            {updatingInterval ? "Saving..." : "Save"}
-          </button>
-        </form>
-        <p className="text-xs text-gray-500 mt-2">
-          Worker evaluates enabled rules every {intervalSec}s. Changes take effect on the next cycle.
-        </p>
-      </div>
-
-      <div className="bg-zinc-800 rounded-lg border border-zinc-700 p-4">
         <div className="flex items-center justify-between mb-4">
         <span className="text-xs text-gray-500">{rules.length} rule(s)</span>
         {!showForm && !editingRule && (
@@ -168,7 +102,7 @@ export default function AlertRulesManager() {
         <AlertRuleForm
           onSaved={() => {
             setShowForm(false);
-            fetchRules();
+            invalidateRules();
           }}
           onCancel={() => setShowForm(false)}
         />
@@ -179,7 +113,7 @@ export default function AlertRulesManager() {
           rule={editingRule}
           onSaved={() => {
             setEditingRule(null);
-            fetchRules();
+            invalidateRules();
           }}
           onCancel={() => setEditingRule(null)}
         />
@@ -202,7 +136,8 @@ export default function AlertRulesManager() {
                 <p className="text-xs text-gray-400 mt-1">{rule.description}</p>
                 <p className="text-xs text-gray-500 mt-1 font-mono">
                   {rule.match_field}=&quot;{rule.match_value}&quot; · group by {rule.group_by} · ≥{rule.threshold} in{" "}
-                  {rule.window_minutes}m
+                  {rule.window_minutes}m · cooldown{" "}
+                  {rule.cooldown_minutes != null ? `${rule.cooldown_minutes}m` : `${rule.window_minutes}m (auto)`}
                 </p>
               </div>
               <div className="flex items-center gap-1 shrink-0">

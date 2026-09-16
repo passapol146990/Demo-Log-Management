@@ -12,8 +12,13 @@ services:
       - OPENSEARCH_USER=${OPENSEARCH_USER}
       - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
       - WEBHOOK_URL=${WEBHOOK_URL}
+      - LOG_RETENTION_DAYS=${LOG_RETENTION_DAYS:-7}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - SEARCH_CACHE_TTL_SECONDS=${SEARCH_CACHE_TTL_SECONDS:-4}
     depends_on:
       opensearch:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/login"]
@@ -116,6 +121,7 @@ services:
       - ENRICHMENT_INTERVAL_MS=${ENRICHMENT_INTERVAL_MS:-15000}
       - ENRICHMENT_BATCH_SIZE=${ENRICHMENT_BATCH_SIZE:-100}
       - ENRICHMENT_RATE_LIMIT_PER_SEC=${ENRICHMENT_RATE_LIMIT_PER_SEC:-100}
+      - ALERT_CHECK_INTERVAL_MS=${ALERT_CHECK_INTERVAL_MS:-10000}
     depends_on:
       opensearch:
         condition: service_healthy

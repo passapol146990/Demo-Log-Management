@@ -4,6 +4,7 @@ import { ingestSchema } from "@/lib/ingest-schema";
 import { ZodError } from "zod";
 import { normalize, validateAndNormalizeBatch } from "@/lib/ingest-batch";
 import { indexLog } from "@/lib/opensearch";
+import { cacheDeleteByPrefix } from "@/lib/cache";
 
 export async function POST(request: NextRequest) {
   const auth = requireRole(request, ["admin"]);
@@ -25,6 +26,7 @@ export async function POST(request: NextRequest) {
         await indexLog(log);
       }
       const succeeded = normalizedLogs.length;
+      if (succeeded > 0) await cacheDeleteByPrefix(`search:${tenant}:`);
       return NextResponse.json({
         batch: true,
         total,
@@ -38,6 +40,7 @@ export async function POST(request: NextRequest) {
     const data = { ...parsed, tenant };
     const result = normalize(parsed.source, data, JSON.stringify(body));
     await indexLog(result);
+    await cacheDeleteByPrefix(`search:${tenant}:`);
     return NextResponse.json({ normalized: result }, { status: 200 });
   } catch (error) {
     if (error instanceof ZodError) {

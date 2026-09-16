@@ -1,11 +1,10 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { authFetch } from "@/hooks/useAuthFetch";
 import { AlertEvent, severityToastLevel } from "@/lib/types/alert";
-
-const POLL_INTERVAL_MS = 5000;
 
 interface AlertsContextValue {
   alerts: AlertEvent[];
@@ -16,60 +15,49 @@ interface AlertsContextValue {
 
 const AlertsContext = createContext<AlertsContextValue | null>(null);
 
+async function fetchAlerts(): Promise<AlertEvent[]> {
+  const res = await authFetch("/api/alerts");
+  if (!res.ok) throw new Error("Failed to fetch alerts");
+  const data: { alerts: AlertEvent[] } = await res.json();
+  return data.alerts || [];
+}
+
 export function AlertsProvider({ children }: { children: ReactNode }) {
-  const [alerts, setAlerts] = useState<AlertEvent[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLive, setIsLive] = useState(false);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const seenIds = useRef<Set<string> | null>(null);
 
+  const { data, isError, isSuccess } = useQuery({
+    queryKey: ["alerts"],
+    queryFn: fetchAlerts,
+  });
+
+  const alerts = data ?? [];
+
   useEffect(() => {
-    let cancelled = false;
+    if (!isSuccess || !data) return;
 
-    const poll = async () => {
-      try {
-        const res = await authFetch("/api/alerts");
-        if (!res.ok) return;
-        const data: { alerts: AlertEvent[] } = await res.json();
-        const incoming = data.alerts || [];
-        if (cancelled) return;
+    if (seenIds.current === null) {
+      seenIds.current = new Set(data.map((a) => a.id));
+      setReadIds(new Set(data.map((a) => a.id)));
+      return;
+    }
 
-        setAlerts(incoming);
-        setIsLive(true);
+    for (const alert of data) {
+      if (seenIds.current.has(alert.id)) continue;
+      seenIds.current.add(alert.id);
+      const level = severityToastLevel(alert.severity);
+      toast[level](alert.rule_name, {
+        description: alert.description,
+        duration: 8000,
+      });
+    }
+  }, [data, isSuccess]);
 
-        if (seenIds.current === null) {
-          seenIds.current = new Set(incoming.map((a) => a.id));
-          return;
-        }
-
-        let newCount = 0;
-        for (const alert of incoming) {
-          if (seenIds.current.has(alert.id)) continue;
-          seenIds.current.add(alert.id);
-          newCount += 1;
-          const level = severityToastLevel(alert.severity);
-          toast[level](alert.rule_name, {
-            description: alert.description,
-            duration: 8000,
-          });
-        }
-        if (newCount > 0) setUnreadCount((c) => c + newCount);
-      } catch {
-        if (!cancelled) setIsLive(false);
-      }
-    };
-
-    poll();
-    const timer = setInterval(poll, POLL_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, []);
-
-  const markAllRead = () => setUnreadCount(0);
+  const unreadCount = alerts.filter((a) => !readIds.has(a.id)).length;
+  const markAllRead = () => setReadIds(new Set(alerts.map((a) => a.id)));
 
   return (
-    <AlertsContext.Provider value={{ alerts, unreadCount, isLive, markAllRead }}>
+    <AlertsContext.Provider value={{ alerts, unreadCount, isLive: isSuccess && !isError, markAllRead }}>
       {children}
     </AlertsContext.Provider>
   );

@@ -22,7 +22,8 @@ export default function AlertRuleForm({ rule, onSaved, onCancel }: AlertRuleForm
   const [groupBy, setGroupBy] = useState(rule?.group_by ?? "src_ip");
   const [threshold, setThreshold] = useState(rule?.threshold ?? 5);
   const [windowMinutes, setWindowMinutes] = useState(rule?.window_minutes ?? 5);
-  const [cooldownMinutes, setCooldownMinutes] = useState(rule?.cooldown_minutes ?? rule?.window_minutes ?? 5);
+  const [useCustomCooldown, setUseCustomCooldown] = useState(rule?.cooldown_minutes != null);
+  const [cooldownMinutes, setCooldownMinutes] = useState(rule?.cooldown_minutes ?? 5);
   const [severity, setSeverity] = useState(rule?.severity ?? 5);
   const [webhookUrl, setWebhookUrl] = useState(rule?.webhook_url ?? "");
   const [enabled, setEnabled] = useState(rule?.enabled ?? true);
@@ -42,7 +43,7 @@ export default function AlertRuleForm({ rule, onSaved, onCancel }: AlertRuleForm
       group_by: groupBy,
       threshold: Number(threshold),
       window_minutes: Number(windowMinutes),
-      cooldown_minutes: Number(cooldownMinutes),
+      cooldown_minutes: useCustomCooldown ? Number(cooldownMinutes) : null,
       severity: Number(severity),
       webhook_url: webhookUrl.trim() || undefined,
     };
@@ -164,15 +165,27 @@ export default function AlertRuleForm({ rule, onSaved, onCancel }: AlertRuleForm
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Cooldown (minutes)</label>
-          <input
-            type="number"
-            required
-            min={1}
-            value={cooldownMinutes}
-            onChange={(e) => setCooldownMinutes(Number(e.target.value))}
-            className={inputClass}
-          />
+          <label className="block text-xs text-gray-500 mb-1">Cooldown</label>
+          <div className="flex items-center gap-2">
+            <select
+              value={useCustomCooldown ? "custom" : "auto"}
+              onChange={(e) => setUseCustomCooldown(e.target.value === "custom")}
+              className={inputClass}
+            >
+              <option value="auto">Auto (≥ time window)</option>
+              <option value="custom">Custom (minutes)</option>
+            </select>
+            {useCustomCooldown && (
+              <input
+                type="number"
+                required
+                min={1}
+                value={cooldownMinutes}
+                onChange={(e) => setCooldownMinutes(Number(e.target.value))}
+                className={`${inputClass} w-20 shrink-0`}
+              />
+            )}
+          </div>
         </div>
         <div className="flex items-end">
           <label className="flex items-center gap-2 text-sm text-gray-300 mb-2">
@@ -196,7 +209,7 @@ export default function AlertRuleForm({ rule, onSaved, onCancel }: AlertRuleForm
       <p className="text-xs text-gray-500 mb-3">
         Plain-language preview: <span className="text-gray-300">If {matchField} = &quot;{matchValue || "..."}&quot;
         happens ≥ {threshold} times from the same {groupBy} within {windowMinutes} minute(s), trigger a severity {severity} alert,
-        then suppress repeats for {cooldownMinutes} minute(s).</span>
+        then suppress repeats {useCustomCooldown ? `for ${cooldownMinutes} minute(s)` : `for at least ${windowMinutes} minute(s) (the time window)`}.</span>
       </p>
 
       <div className="flex items-center gap-2">

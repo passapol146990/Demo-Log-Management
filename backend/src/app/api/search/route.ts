@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { searchLogs } from "@/lib/opensearch";
 import { getHiddenFields, stripFields } from "@/lib/fieldPermissions";
+import { cacheGet, cacheSet } from "@/lib/cache";
+
+const CACHE_TTL_SECONDS = Number(process.env.SEARCH_CACHE_TTL_SECONDS) || 4;
 
 export async function GET(request: NextRequest) {
   const auth = requireAuth(request);
@@ -24,6 +27,12 @@ export async function GET(request: NextRequest) {
 
   const effectiveSize = size !== undefined && !Number.isNaN(size) ? size : 20;
 
+  const cacheKey = `search:${payload.tenant}:${payload.role}:${keyword ?? ""}:${from ?? ""}:${to ?? ""}:${source ?? ""}:${user ?? ""}:${src_ip ?? ""}:${severity_min ?? ""}:${effectiveSize}:${page}`;
+  const cached = await cacheGet<{ hits: unknown[]; total: unknown }>(cacheKey);
+  if (cached) {
+    return NextResponse.json(cached, { headers: { "X-Cache": "HIT" } });
+  }
+
   const results = await searchLogs({
     query: keyword || "",
     tenant: payload.tenant,
@@ -43,5 +52,7 @@ export async function GET(request: NextRequest) {
     _source: stripFields(hit._source, hiddenFields),
   }));
 
-  return NextResponse.json({ hits: filteredHits, total: results.body.hits.total });
+  const responseBody = { hits: filteredHits, total: results.body.hits.total };
+  await cacheSet(cacheKey, responseBody, CACHE_TTL_SECONDS);
+  return NextResponse.json(responseBody, { headers: { "X-Cache": "MISS" } });
 }

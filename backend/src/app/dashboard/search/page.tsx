@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { authFetch } from "@/hooks/useAuthFetch";
-import { LogEntry, SearchResponse } from "@/lib/types/log";
+import { SearchResponse } from "@/lib/types/log";
 import SearchFilters, { SearchFilterValues } from "@/components/dashboard/SearchFilters";
 import LogsTable from "@/components/dashboard/LogsTable";
 
@@ -19,68 +20,55 @@ const EMPTY_FILTERS: SearchFilterValues = {
   to: "",
 };
 
+async function fetchSearchResults(f: SearchFilterValues, pageIndex: number): Promise<SearchResponse> {
+  const params = new URLSearchParams({
+    keyword: f.keyword,
+    source: f.source,
+    user: f.user,
+    src_ip: f.src_ip,
+    from: f.from,
+    to: f.to,
+    size: String(PAGE_SIZE),
+    page: String(pageIndex),
+  });
+  if (f.severityMin) params.set("severity_min", f.severityMin);
+
+  const res = await authFetch(`/api/search?${params}`);
+  if (!res.ok) throw new Error("Search request failed");
+  return res.json();
+}
+
 export default function SearchPage() {
   const [filters, setFilters] = useState<SearchFilterValues>(EMPTY_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<SearchFilterValues>(EMPTY_FILTERS);
   const [page, setPage] = useState(0);
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  const runSearch = useCallback((f: SearchFilterValues, pageIndex: number) => {
-    setLoading(true);
-    setError("");
-    const params = new URLSearchParams({
-      keyword: f.keyword,
-      source: f.source,
-      user: f.user,
-      src_ip: f.src_ip,
-      from: f.from,
-      to: f.to,
-      size: String(PAGE_SIZE),
-      page: String(pageIndex),
-    });
-    if (f.severityMin) params.set("severity_min", f.severityMin);
+  const {
+    data,
+    isLoading: loading,
+    isError,
+  } = useQuery({
+    queryKey: ["search", appliedFilters, page],
+    queryFn: () => fetchSearchResults(appliedFilters, page),
+  });
 
-    authFetch(`/api/search?${params}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Search request failed");
-        return res.json() as Promise<SearchResponse>;
-      })
-      .then((data) => {
-        setLogs(data.hits?.map((h) => h._source) || []);
-        setTotal(data.total?.value ?? 0);
-      })
-      .catch(() => {
-        setError("Failed to load logs. Please try again.");
-        setLogs([]);
-        setTotal(0);
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => runSearch(EMPTY_FILTERS, 0), 0);
-    return () => clearTimeout(timer);
-  }, [runSearch]);
+  const logs = useMemo(() => data?.hits?.map((h) => h._source) || [], [data]);
+  const total = data?.total?.value ?? 0;
+  const error = isError ? "Failed to load logs. Please try again." : "";
 
   const handleSearch = () => {
     setAppliedFilters(filters);
     setPage(0);
-    runSearch(filters, 0);
   };
 
   const handleReset = () => {
     setFilters(EMPTY_FILTERS);
     setAppliedFilters(EMPTY_FILTERS);
     setPage(0);
-    runSearch(EMPTY_FILTERS, 0);
   };
 
   const goToPage = (next: number) => {
     setPage(next);
-    runSearch(appliedFilters, next);
   };
 
   const activeCount = useMemo(

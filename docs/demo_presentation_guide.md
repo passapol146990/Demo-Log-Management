@@ -110,14 +110,14 @@ curl -s -X POST http://localhost:3000/api/ingest -H "Content-Type: application/j
 - Logic ประเมินกฎ + group by + threshold ภายในหน้าต่างเวลา: `backend/src/lib/alerting.ts:80` (`evaluateRule`)
 - กัน alert ซ้ำ (cooldown/dedup): `backend/src/lib/alerting.ts:90-98` เรียก `shouldEmit()` จาก `alertDedup.ts`
 - ส่ง Webhook: `backend/src/lib/alerting.ts:111` เรียก `dispatchWebhook()`
-- Worker ที่รันตรวจทุก 60 วิ: `backend/workers/alertChecker.ts:8-19` (`runAlertCheck`, วน `listTenants()` แล้วเรียก `evaluateAllRules` ทุก tenant)
+- Worker ที่รันตรวจทุก 10 วิ (fixed, `ALERT_CHECK_INTERVAL_MS`): `backend/workers/alertChecker.ts` (`runAlertCheck`, วน `listTenants()` แล้วเรียก `evaluateAllRules` ทุก tenant)
 - หน้า UI แสดงผล alert: `backend/src/app/dashboard/alerts/page.tsx`
 
 **Demo (สคริปต์พร้อมใช้):**
 ```bash
 python3 samples/scripts/4_demo_login_failure_alert.py
 ```
-→ ส่ง 5 login failure จาก IP เดียวกัน → รอ ~60 วิ (worker cycle) → เปิด `/dashboard/alerts` เห็น alert ขึ้น หรือดู webhook.site ที่ตั้งไว้ใน `.env`/`.env.deploy` (`WEBHOOK_URL`)
+→ ส่ง 5 login failure จาก IP เดียวกัน → รอ ~10 วิ (worker cycle) → เปิด `/dashboard/alerts` เห็น alert ขึ้น หรือดู webhook.site ที่ตั้งไว้ใน `.env` (`WEBHOOK_URL`)
 
 ---
 

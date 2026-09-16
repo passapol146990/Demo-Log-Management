@@ -20,7 +20,7 @@ const createRuleSchema = z.object({
   group_by: z.enum(GROUP_BY_OPTIONS),
   threshold: z.number().int().min(1, "Threshold must be at least 1"),
   window_minutes: z.number().int().min(1, "Window must be at least 1 minute"),
-  cooldown_minutes: z.number().int().min(1).optional(),
+  cooldown_minutes: z.number().int().min(1).nullable().optional(),
   severity: z.number().int().min(0).max(10),
   webhook_url: z.string().optional(),
 });
@@ -35,7 +35,7 @@ const updateRuleSchema = z.object({
   group_by: z.enum(GROUP_BY_OPTIONS).optional(),
   threshold: z.number().int().min(1).optional(),
   window_minutes: z.number().int().min(1).optional(),
-  cooldown_minutes: z.number().int().min(1).optional(),
+  cooldown_minutes: z.number().int().min(1).nullable().optional(),
   severity: z.number().int().min(0).max(10).optional(),
   webhook_url: z.string().optional(),
 });

@@ -89,4 +89,31 @@ describe("Alert Rules Store", () => {
   test("deleteRule throws for unknown id", async () => {
     await expect(deleteRule("does-not-exist")).rejects.toThrow(AlertRuleError);
   });
+
+  test("createRule rejects a duplicate condition even if the existing rule is disabled", async () => {
+    await createRule({ ...sampleRule, enabled: false, name: "Disabled Original" });
+    await expect(
+      createRule({ ...sampleRule, name: "Accidental Duplicate" })
+    ).rejects.toThrow(AlertRuleError);
+  });
+
+  test("createRule allows rules with different conditions", async () => {
+    await createRule(sampleRule);
+    const other = await createRule({ ...sampleRule, name: "Different", match_value: "gcp" });
+    expect(other.id).toBeDefined();
+  });
+
+  test("updateRule rejects changing a rule to match another rule's condition", async () => {
+    const first = await createRule(sampleRule);
+    const second = await createRule({ ...sampleRule, name: "Second", match_value: "gcp" });
+    await expect(
+      updateRule(second.id, { match_value: first.match_value })
+    ).rejects.toThrow(AlertRuleError);
+  });
+
+  test("updateRule allows re-saving the same rule without a self-conflict", async () => {
+    const rule = await createRule(sampleRule);
+    const updated = await updateRule(rule.id, { enabled: false });
+    expect(updated.enabled).toBe(false);
+  });
 });

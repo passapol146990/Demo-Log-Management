@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserPlus, KeyRound, Trash2, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { authFetch } from "@/hooks/useAuthFetch";
@@ -18,39 +19,41 @@ function roleBadgeClass(role: string): string {
     : "bg-zinc-600/40 text-gray-300 ring-1 ring-inset ring-zinc-500/30";
 }
 
+async function fetchUsersList(): Promise<{ users: SafeUser[]; tenant: string }> {
+  const res = await authFetch("/api/users");
+  const data = await res.json();
+  return { users: data.users || [], tenant: data.tenant || "" };
+}
+
+async function fetchCurrentEmail(): Promise<string> {
+  const res = await authFetch("/api/auth/me");
+  const data = await res.json();
+  return data.user?.sub || "";
+}
+
 export default function UsersTable() {
-  const [users, setUsers] = useState<SafeUser[]>([]);
-  const [tenant, setTenant] = useState("");
-  const [currentEmail, setCurrentEmail] = useState("");
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
   const [resetTarget, setResetTarget] = useState<string | null>(null);
   const [resetPassword, setResetPassword] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [busyEmail, setBusyEmail] = useState<string | null>(null);
 
-  const fetchUsers = useCallback(() => {
-    setLoading(true);
-    authFetch("/api/users")
-      .then((res) => res.json())
-      .then((data) => {
-        setUsers(data.users || []);
-        setTenant(data.tenant || "");
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["users"],
+    queryFn: fetchUsersList,
+  });
+  const users = data?.users ?? [];
+  const tenant = data?.tenant ?? "";
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchUsers();
-      authFetch("/api/auth/me")
-        .then((res) => res.json())
-        .then((data) => setCurrentEmail(data.user?.sub || ""))
-        .catch(() => {});
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [fetchUsers]);
+  const { data: currentEmail = "" } = useQuery({
+    queryKey: ["auth", "me", "email"],
+    queryFn: fetchCurrentEmail,
+    staleTime: Infinity,
+    refetchInterval: false,
+  });
+
+  const fetchUsers = () => queryClient.invalidateQueries({ queryKey: ["users"] });
 
   const handleRoleChange = async (email: string, role: "admin" | "viewer") => {
     setBusyEmail(email);

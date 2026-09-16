@@ -1,6 +1,6 @@
 services:
   backend:
-    volumes: !reset
+    volumes: !override
       - ./backend/src/config:/app/src/config
     environment:
       - NODE_ENV=production

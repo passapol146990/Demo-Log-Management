@@ -4,6 +4,7 @@ from urllib import error, request
 
 DEFAULT_HOST = "http://localhost:3000"
 DEFAULT_EMAIL = "admin@demoA"
+# DEFAULT_EMAIL = "viewer@demoA"
 DEFAULT_PASSWORD = "password123"
 
 

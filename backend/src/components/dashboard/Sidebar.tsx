@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { TokenPayload } from "@/lib/auth";
 import LogoutButton from "@/components/dashboard/LogoutButton";
 
@@ -19,23 +21,29 @@ export default function Sidebar({ user }: { user: TokenPayload }) {
   const [username] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("username") ?? user.sub : user.sub
   );
+  const pathname = usePathname();
+
+  const navClass = (href: string) =>
+    `block p-2 rounded transition-colors ${
+      pathname === href ? "bg-zinc-700 text-white" : "hover:bg-zinc-700 text-gray-300"
+    }`;
 
   return (
     <aside className="w-64 h-full shrink-0 bg-zinc-800 p-4 text-white flex flex-col">
       <h2 className="text-xl font-bold mb-6">Log Management</h2>
       <nav className="space-y-2 flex-1">
         {NAV_ITEMS.map((item) => (
-          <a key={item.href} href={item.href} className="block p-2 rounded hover:bg-zinc-700">
+          <Link key={item.href} href={item.href} prefetch className={navClass(item.href)}>
             {item.label}
-          </a>
+          </Link>
         ))}
         {user.role === "admin" && (
           <>
             <p className="pt-4 pb-1 px-2 text-xs uppercase tracking-wide text-gray-500">Admin</p>
             {ADMIN_NAV_ITEMS.map((item) => (
-              <a key={item.href} href={item.href} className="block p-2 rounded hover:bg-zinc-700">
+              <Link key={item.href} href={item.href} prefetch className={navClass(item.href)}>
                 {item.label}
-              </a>
+              </Link>
             ))}
           </>
         )}

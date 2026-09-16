@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-ENV_FILE=".env.deploy"
+ENV_FILE=".env"
 ACTION=${1:-up}
 
 if [ ! -f "$ENV_FILE" ]; then

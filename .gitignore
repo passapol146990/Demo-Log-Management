@@ -14,7 +14,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -149,7 +148,6 @@ activemq-data/
 
 # Environments
 .env
-.env.deploy
 .envrc
 .venv
 env/
@@ -223,6 +221,7 @@ backend/node_modules/
 backend/.next/
 backend/.env
 backend/*.js
+!backend/jest.config.js
 backend/*.map
 
 # Docs (only ignore templates, not progress or results)

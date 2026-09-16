@@ -1,0 +1,30 @@
+export function normalizeCrowdStrike(data: Record<string, unknown>): Record<string, unknown> {
+  const tags = (data.tags as string[]) || [];
+  return {
+    "@timestamp": (data["@timestamp"] as string) || new Date().toISOString(),
+    tenant: (data.tenant as string) || "demoA",
+    source: "crowdstrike",
+    vendor: (data.vendor as string) || "CrowdStrike",
+    product: (data.product as string) || "Falcon",
+    event_type: (data.event_type as string) || "threat",
+    event_subtype: (data.event_subtype as string) || "alert",
+    severity: (data.severity as number) ?? 9,
+    action: (data.action as string) || "",
+    src_ip: (data.src_ip as string) || "",
+    src_port: (data.src_port as number) || 0,
+    dst_ip: (data.dst_ip as string) || "",
+    dst_port: (data.dst_port as number) || 0,
+    protocol: (data.protocol as string) || "",
+    user: (data.user as string) || "",
+    host: (data.host as string) || "",
+    process: (data.process as string) || "",
+    url: (data.url as string) || "",
+    http_method: "",
+    status_code: 0,
+    rule_name: (data.rule_name as string) || "",
+    rule_id: (data.rule_id as string) || "",
+    cloud: { account_id: "", region: "", service: "" },
+    raw: JSON.stringify(data),
+    _tags: ["crowdstrike", "threat", ...tags],
+  };
+}
