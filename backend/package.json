@@ -15,7 +15,7 @@
     "axios": "^1.7.0",
     "bcryptjs": "^3.0.3",
     "cookie": "^1.0.0",
-    "ioredis": "^5.11.1",
+    "ioredis": "^6.0.0",
     "jose": "^6.2.12",
     "jsonwebtoken": "^9.0.0",
     "lucide-react": "^1.45.0",
